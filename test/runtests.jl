@@ -47,6 +47,9 @@ Pretend.activate()
         randdev(5)
     end == [0x05, 0x04, 0x03, 0x02, 0x01]
 
+    # outside test it's a no-op
+    @test randdev(5) != [0x05, 0x04, 0x03, 0x02, 0x01]
+
     # Design changes
     # - ???
 
