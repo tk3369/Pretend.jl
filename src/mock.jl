@@ -35,8 +35,8 @@ Run function `f` with the specified `patches` applied. Note
 that the patches are only effective when the global switch
 is activated. See also [`Pretend.activate`](@ref).
 
-Each patch in the `patches` argument is a pair of the original 
-function and the patch function. If the patch functtion returns 
+Each patch in the `patches` argument is a pair of the original
+function and the patch function. If the patch functtion returns
 the singleton object `Fallback()` then the original function will
 be executed.  This provides an easy mechanism of implementing
 conditional patches.
@@ -66,14 +66,13 @@ function apply(f::Function, patches::Pair...)
     patch_store = default_patch_store()
     preserve(patch_store)
     try
-        for p in ps 
+        for p in ps
             register(patch_store, p.patch, p.sig)
         end
-        f()
+        return f()
     finally
        restore(patch_store)
     end
-    return nothing
 end
 
 """
