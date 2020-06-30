@@ -1,29 +1,9 @@
-const MOCKING = Ref{Bool}(false)
+"""
+    @mockable
 
-activate() = MOCKING[] = true
-deactivate() = MOCKING[] = false
-
-const PATCHES = Dict()
-
-function find_patch(args...)
-    return get(PATCHES, args, nothing)
-end
-
-function register_patch(f, args...)
-    # @info "Register" f args
-    PATCHES[args] = f
-end
-
-function unregister_patch(args...)
-    # @info "Unregister" args
-    PATCHES[args] = nothing
-end
-
-#=
-@mockable function add(x::Int, y::Int)
-    x + y
-end
-=#
+Annotate a function defintion such that the function can be mocked
+later.
+"""
 macro mockable(ex)
     def = splitdef(ex)
     func = QuoteNode(def[:name])
@@ -31,17 +11,15 @@ macro mockable(ex)
     names = arg_names(def[:args])
     mod = __module__
 
-    # dump(def[:args])
     # @info "mockable" mod func types
     def[:body] = quote
         if Pretend.MOCKING[]
-            patch = Pretend.find_patch($mod, $func, ($(types...),))
+            patch_store = Pretend.default_patch_store()
+            patch = Pretend.find(patch_store, $mod, $func, ($(types...),))
+            # @show patch
             if patch !== nothing
-                # @info "found patch" patch
                 val = patch($(names...))
                 val isa Pretend.Fallback || return val
-            else
-                # @info "cannot find patch" $mod $func $(tuple(types...))
             end
         end
         $(def[:body])
@@ -50,34 +28,84 @@ macro mockable(ex)
     return esc(combinedef(def))
 end
 
-function apply(f::Function, patches::Pair...) #{T,S}...) where {T <: Callable, S <: Callable}
+"""
+    apply(f::Function, patches::Pair...)
+
+Run function `f` with the specified `patches` applied. Note
+that the patches are only effective when the global switch
+is activated. See also [`Pretend.activate`](@ref).
+
+Each patch in the `patches` argument is a pair of the original 
+function and the patch function. If the patch functtion returns 
+the singleton object `Fallback()` then the original function will
+be executed.  This provides an easy mechanism of implementing
+conditional patches.
+
+# Example
+
+```
+@mockable add(x, y) = x + y
+
+apply(add => (x,y) -> x - y) do
+    @test add(1, 2) == -1
+end
+
+apply(add => (x,y) -> x == y ? 0 : Fallback()) do
+    @test add(1, 2) == 3
+    @test add(5, 5) == 0
+end
+```
+"""
+function apply(f::Function, patches::Pair...)
     ps = []
-    for p in patches
-        orig, patch = p
-        mod = parentmodule(orig)
-        name = nameof(orig)
-        method = first(methods(patch))
-        method_args = tuple(method.sig.types[2:end]...)
-        push!(ps, patch => (mod, name, method_args))
+    for (orig, patch) in patches
+        for sig in signatures(nameof(orig), patch)
+            push!(ps, (sig = sig, patch = patch))
+        end
     end
-    orig_state = copy(PATCHES)
+    patch_store = default_patch_store()
+    preserve(patch_store)
     try
         for p in ps 
-            patch = first(p)
-            args = last(p)
-            register_patch(patch, args...)
+            register(patch_store, p.patch, p.sig)
         end
-        # @show PATCHES
         f()
     finally
-       empty!(PATCHES)
-       copy!(PATCHES, orig_state)
+       restore(patch_store)
     end
     return nothing
 end
 
-# Extract x or T from x::T  
+"""
+    signatures(name::Symbol, f::Callable)
+
+Return signatures that can be used to register in the patch store.
+A signature is tuple of (module, name, arg1, arg2, ...).  This function
+returns an array because there can be multiple methods per function.
+"""
+function signatures(name::Symbol, f::Callable)
+    return Any[tuple(m.module, name, tuple(m.sig.types[2:end]...))
+                for m in methods(f)]
+end
+
+"""
+    arg_names(args)
+
+Return names of the arguments. An argument is expected to be a Symbol
+or an Expr e.g. `x::T` or `::T`.
+
+See also: [`arg_types`](@ref)
+"""
 arg_names(args) = [arg_name(arg) for arg in args]
+
+"""
+    arg_types(args)
+
+Return types of the arguments. An argument is expected to be a Symbol
+or an Expr e.g. `x::T` or `::T`.
+
+See also: [`arg_names`](@ref)
+"""
 arg_types(args) = [arg_type(arg) for arg in args]
 
 arg_name(s::Symbol) = s
