@@ -1,0 +1,1 @@
+struct Fallback end
