@@ -13,7 +13,7 @@ macro mockable(ex)
 
     # @info "mockable" mod func types
     def[:body] = quote
-        if Pretend.MOCKING[]
+        if Pretend.TESTING[]
             patch_store = Pretend.default_patch_store()
             patch = Pretend.find(patch_store, $mod, $func, ($(types...),))
             # @show patch
