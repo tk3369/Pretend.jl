@@ -4,4 +4,5 @@ using Test
 @testset "Pretend.jl" begin
     include("basic.jl")
     include("randdev.jl")
+    include("test_spy.jl")
 end

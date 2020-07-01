@@ -14,9 +14,12 @@ macro mockable(ex)
     # @info "mockable" mod func types
     def[:body] = quote
         if Pretend.TESTING[]
+            # spy
+            Pretend.record_call($mod, $func, $(names...))
+
+            # apply patch
             patch_store = Pretend.default_patch_store()
             patch = Pretend.find(patch_store, $mod, $func, ($(types...),))
-            # @show patch
             if patch !== nothing
                 val = patch($(names...))
                 val isa Pretend.Fallback || return val
@@ -57,6 +60,7 @@ end
 ```
 """
 function apply(f::Function, patches::Pair...)
+    reset_statistics()
     ps = []
     for (orig, patch) in patches
         for sig in signatures(nameof(orig), patch)
