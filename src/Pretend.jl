@@ -7,7 +7,7 @@ export @mockable
 export apply, spy
 export Fallback
 
-export count_calls,
+export
     verify_at_least_once,
     verify_exact_count,
     verify_exactly_once,
