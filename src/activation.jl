@@ -1,16 +1,12 @@
 """
     TESTING
 
-Master switch to enable testing mode.  The default is
-testing mode.  Users of this package should call
-`Pretend.enable_product()` in the module.
+Master switch to enable production/testing mode.  The default is
+production mode.  Users of this package should call `Pretend.activate()`
+in the main source code of the module.
 """
-const TESTING = Ref{Bool}(true)
+const TESTING = Ref{Bool}(false)
 
-function enable_testing()
+function activate()
     TESTING[] = true
-end
-
-function enable_production()
-    TESTING[] = false
 end

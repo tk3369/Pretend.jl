@@ -1,8 +1,7 @@
 """
     @mockable
 
-Annotate a function defintion such that the function can be mocked
-later.
+Annotate a function definition such that the function can be mocked later.
 """
 macro mockable(ex)
     def = splitdef(ex)
