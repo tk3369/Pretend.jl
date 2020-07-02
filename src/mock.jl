@@ -6,20 +6,18 @@ later.
 """
 macro mockable(ex)
     def = splitdef(ex)
-    func = QuoteNode(def[:name])
+    func = def[:name]
     types = haskey(def, :args) ? arg_types(def[:args]) : ()
     names = haskey(def, :args) ? arg_names(def[:args]) : ()
-    mod = __module__
 
-    # @info "mockable" mod func types
     def[:body] = quote
         if Pretend.TESTING[]
             # spy
-            Pretend.record_call($mod, $func, $(names...))
+            Pretend.record_call($func, $(names...))
 
             # apply patch
             patch_store = Pretend.default_patch_store()
-            patch = Pretend.find(patch_store, $mod, $func, ($(types...),))
+            patch = Pretend.find(patch_store, $func, ($(types...),))
             if patch !== nothing
                 val = patch($(names...))
                 val isa Pretend.Fallback || return val
@@ -27,7 +25,6 @@ macro mockable(ex)
         end
         $(def[:body])
     end
-    # @info combinedef(def)
     return esc(combinedef(def))
 end
 
@@ -63,7 +60,7 @@ function apply(f::Function, patches::Pair...)
     reset_statistics()
     ps = []
     for (orig, patch) in patches
-        for sig in signatures(nameof(orig), patch)
+        for sig in signatures(orig, patch)
             push!(ps, (sig = sig, patch = patch))
         end
     end
@@ -80,15 +77,14 @@ function apply(f::Function, patches::Pair...)
 end
 
 """
-    signatures(name::Symbol, f::Callable)
+    signatures(f::Callable)
 
 Return signatures that can be used to register in the patch store.
-A signature is tuple of (module, name, arg1, arg2, ...).  This function
+A signature is tuple of (f, argtype1, argtype2, ...).  This function
 returns an array because there can be multiple methods per function.
 """
-function signatures(name::Symbol, f::Callable)
-    return Any[tuple(m.module, name, tuple(m.sig.types[2:end]...))
-                for m in methods(f)]
+function signatures(orig::Function, f::Function)
+    return Any[tuple(orig, tuple(m.sig.types[2:end]...)) for m in methods(f)]
 end
 
 """
