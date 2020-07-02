@@ -8,10 +8,10 @@ function spy(f::Function)
     f()
 end
 
-verify_none(args...)           = count_calls(args...) ==0
-verify_exactly_once(args...)   = count_calls(args...) == 1
-verify_at_least_once(args...)  = count_calls(args...) > 0
-verify_exact_count(args...; n) = count_calls(args...) == n
+called_exactly_once(f::Function, args...)  = count_calls(parentmodule(f), nameof(f), args...) == 1
+called_at_least_once(f::Function, args...) = count_calls(parentmodule(f), nameof(f), args...) >= 1
+called_exactly_n(f::Function, args...; n)  = count_calls(parentmodule(f), nameof(f), args...) == n
+was_not_called(f::Function, args...)       = count_calls(parentmodule(f), nameof(f), args...) == 0
 
 # Spy recordings
 

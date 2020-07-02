@@ -23,8 +23,18 @@ apply(add => (x,y) -> x == y ? 0 : Fallback()) do
     @test add(1, 2) == 3
     @test add(5, 5) == 0
 end
+
+# Verification
+@mockable foo() = bar(1,2)
+@mockable bar(x,y) = x * y
+spy() do
+    foo()
+    @test called_exactly_once(bar, 1, 2)
+end
 ```
 
 ## Related projects
 
-The [Mocking.jl]() project has a similar goal but has a different design.
+* [Mocking.jl](https://github.com/invenia/Mocking.jl)
+* [SimpleMock.jl](https://github.com/JuliaTesting/SimpleMock.jl)
+* [ExpectationStubs.jl](https://github.com/oxinabox/ExpectationStubs.jl)

@@ -8,10 +8,10 @@ export apply, spy
 export Fallback
 
 export
-    verify_at_least_once,
-    verify_exact_count,
-    verify_exactly_once,
-    verify_none
+    called_at_least_once,
+    called_exactly_n,
+    called_exactly_once,
+    was_not_called
 
 include("types.jl")
 include("activation.jl")

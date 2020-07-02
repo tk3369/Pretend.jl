@@ -6,13 +6,13 @@
 
     spy() do
         @test caller(1,2) == 6
-        @test verify_exactly_once(Main, :double, 2)
+        @test called_exactly_once(double, 2)
     end
 
     spy() do
         @test caller(2,2) == 8
-        @test verify_exact_count(Main, :double, 2; n = 2)
-        @test verify_none(Main, :triple, 2)
+        @test called_exactly_n(double, 2; n = 2)
+        @test was_not_called(triple, 2)
     end
 
 end
