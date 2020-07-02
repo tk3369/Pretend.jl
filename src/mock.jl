@@ -12,7 +12,7 @@ macro mockable(ex)
     def[:body] = quote
         if Pretend.TESTING[]
             # spy
-            Pretend.record_call($func, $(names...))
+            Pretend.record_call($func, ($(names...),))
 
             # apply patch
             patch_store = Pretend.default_patch_store()
