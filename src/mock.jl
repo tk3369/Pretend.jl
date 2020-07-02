@@ -7,8 +7,8 @@ later.
 macro mockable(ex)
     def = splitdef(ex)
     func = QuoteNode(def[:name])
-    types = arg_types(def[:args])
-    names = arg_names(def[:args])
+    types = haskey(def, :args) ? arg_types(def[:args]) : ()
+    names = haskey(def, :args) ? arg_names(def[:args]) : ()
     mod = __module__
 
     # @info "mockable" mod func types
