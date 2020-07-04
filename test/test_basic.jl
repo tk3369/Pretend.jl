@@ -1,6 +1,6 @@
 @testset "Basic" begin
 
-    # test mock that accepts no args
+# test mock that accepts no args
     @mockable quack() = "quack"
     apply(quack => () -> "woof") do
         @test quack() == "woof"
@@ -26,5 +26,15 @@
         @test mul2(1, 2) == 0          # value returned from patch
         @test mul2(2, 2) == 6          # fall back to default
         @test mul2(2, 3.0) == 8.0      # Float64 patch
+    end
+
+    # test functions that uses kwargs
+    @mockable div2(x; n = 2) = x / n
+    @test div2(10) == 5                # without patch
+    apply(div2 => (x; n = 3) -> n) do  # patched
+        @test div2(10) == 3
+    end
+    apply(div2 => (x) -> 0) do         # patched; kwarg not needed!
+        @test div2(10) == 0
     end
 end

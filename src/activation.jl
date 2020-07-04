@@ -1,12 +1,17 @@
 """
-    TESTING
+    activated()
 
-Master switch to enable production/testing mode.  The default is
-production mode.  Users of this package should call `Pretend.activate()`
-in the main source code of the module.
+Returns true if the mocking framework is enabled. The default setting is OFF so
+that the mocking code is optimized aways by the compiler.
 """
-const TESTING = Ref{Bool}(false)
+activated() = false
 
+"""
+    activate()
+
+Activate the mocking framework. Use this at the beginning of the test suite.
+"""
 function activate()
-    TESTING[] = true
+    @eval activated() = true
+    return nothing
 end

@@ -3,16 +3,19 @@
 
 Annotate a function definition such that the function can be mocked later.
 """
-macro mockable(ex)
+macro mockable(ex::Expr)
     def = splitdef(ex)
     func = def[:name]
     types = haskey(def, :args) ? arg_types(def[:args]) : ()
     names = haskey(def, :args) ? arg_names(def[:args]) : ()
+    kwnames = haskey(def, :kwargs) ? arg_names(def[:kwargs]) : ()
+
+    kwexpr = [:($x = $x) for x in kwnames]
 
     def[:body] = quote
-        if Pretend.TESTING[]
+        if Pretend.activated()
             # spy
-            Pretend.record_call($func, ($(names...),))
+            Pretend.record_call($func, ($(names...),), ($(kwexpr...),))
 
             # apply patch
             patch_store = Pretend.default_patch_store()
@@ -76,7 +79,7 @@ function apply(f::Function, patches::Pair...)
 end
 
 """
-    signatures(f::Callable)
+    signatures(orig::Function, f::Function)
 
 Return signatures that can be used to register in the patch store.
 A signature is tuple of (f, argtype1, argtype2, ...).  This function
@@ -107,8 +110,12 @@ See also: [`arg_names`](@ref)
 arg_types(args) = [arg_type(arg) for arg in args]
 
 arg_name(s::Symbol) = s
-arg_name(e::Expr) = e.head === :(::) && length(e.args) > 1 ? e.args[1] : gensym()
+arg_name(e::Expr) = arg_name(e, Val(e.head))
+arg_name(e::Expr, ::Val{:(::)}) = length(e.args) > 1 ? e.args[1] : gensym()
+arg_name(e::Expr, ::Val{:kw})   = arg_name(e.args[1])
 
 arg_type(s::Symbol) = :Any
-arg_type(e::Expr) = e.head === :(::) && length(e.args) > 1 ? e.args[2] : e.args[1]
+arg_type(e::Expr) = arg_type(e, Val(e.head))
+arg_type(e::Expr, ::Val{:(::)}) = length(e.args) > 1 ? e.args[2] : e.args[1]
+arg_type(e::Expr, ::Val{:kw})   = arg_type(e.args[1])
 
