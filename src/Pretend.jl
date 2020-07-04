@@ -9,7 +9,6 @@ export Fallback
 
 export
     called_at_least_once,
-    called_exactly_n,
     called_exactly_once,
     was_not_called
 
