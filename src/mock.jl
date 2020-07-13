@@ -3,13 +3,27 @@
 
 Annotate a function definition such that the function can be mocked later.
 """
-macro mockable(ex::Expr)
+macro mockable(ex)
+
+    # Auto-expand macro expression if necessary
+    # See https://github.com/invenia/ExprTools.jl/issues/10
+    ex = ex.head === :macrocall ? macroexpand(__module__, ex) : ex
+
+    # If it looks like a call then it must be referring to a third party method.
+    # e.g. @mockable Base.sin(x::Real)
+    if ex.head === :call
+        ret = delegate_method(ex, __module__)
+        ret === nothing && error("@mockable should be used at function definition")
+        expanded = postwalk(rmlines, macroexpand(__module__, ret))
+        return esc(expanded)
+    end
+
+    # parse function definition
     def = splitdef(ex)
     func = def[:name]
     types = haskey(def, :args) ? arg_types(def[:args]) : ()
     names = haskey(def, :args) ? arg_names(def[:args]) : ()
     kwnames = haskey(def, :kwargs) ? arg_names(def[:kwargs]) : ()
-
     kwexpr = [:($x = $x) for x in kwnames]
 
     def[:body] = quote
@@ -27,7 +41,8 @@ macro mockable(ex::Expr)
         end
         $(def[:body])
     end
-    return esc(combinedef(def))
+    expanded = esc(combinedef(def))
+    return expanded
 end
 
 """
@@ -76,6 +91,96 @@ function apply(f::Function, patches::Pair...)
     finally
        restore(patch_store)
     end
+end
+
+"""
+    delegate_method(ex::Expr, mod::Module)
+
+Returns an expression that defines a mockable function such that it can be
+defined in module `mod`.  The mockable function just delegates the call to
+the underlying method referenced in `ex`.
+
+# Example
+
+```julia-repl
+julia> MacroTools.postwalk(rmlines, Pretend.delegate_method(:(Base.sin(x::Real)), @__MODULE__))
+quote
+    @mockable sin(x::Real) = Base.sin(x)
+end
+```
+"""
+function delegate_method(ex::Expr, mod::Module)
+    # Try to resolve the provided name (e.g. Base.sin)
+    func = try
+        Base.eval(mod, ex.args[1])
+    catch e
+        rethrow(e)
+    end
+
+    # The module must be different since otherwise we should expect a full function
+    # defintiion rather than just a reference to a method.
+    parentmodule(func) === mod && return nothing
+
+    # Derive the function body that delegates the call to the thirdparty function.
+    body = delegate_function_body(ex)
+
+    # Remove package prefix e.g. Base.sin => sin
+    ex.args[1] = base_symbol(ex.args[1])
+
+    return quote
+        @mockable $ex = $body
+    end
+end
+
+"""
+    delegate_function_body(cs::Expr)
+
+Returns an expression that delegates the call to the underlying function based upon
+the signature in the expression `cs`.
+
+# Examples
+
+```julia-repl
+julia> Pretend.delegate_function_body(:(Base.sin(x::Real)))
+:(Base.sin(x))
+
+julia> Pretend.delegate_function_body(:(Base.round(x; digits::Integer, base)))
+:(Base.round(x; digits = digits, base = base))
+```
+"""
+function delegate_function_body(cs::Expr)
+    cs.head === :call || error("Argument is not a :call expression: $cs")
+    newargs = Any[cs.args[1]]   # build a new args array; start with function name
+    for arg in cs.args[2:end]   # start with 2 to skip the function name
+        if arg isa Expr
+            if arg.head === :parameters          # kwargs
+                kwargs = Any[                    # make (x = x, y = y, ...)
+                    let name = arg_name(arg)
+                        Expr(:kw, name, name)
+                    end for arg in arg.args]
+                push!(newargs, Expr(:parameters, kwargs...))
+            elseif arg.head === :(::)            # typed positional args x::T
+                push!(newargs, arg_name(arg))
+            else
+                error("Unknown argument: arg.head=$(arg.head)")
+            end
+        elseif arg isa Symbol
+            push!(newargs, arg)
+        else
+            error("Unknown argument: arg=$arg")
+        end
+    end
+    return Expr(:call, newargs...)
+end
+
+"""
+    base_symbol(ex::Expr)
+
+Returns the base symbol of an expression.
+"""
+function base_symbol(ex::Expr)
+    ex.head === :(.) && return ex.args[2].value
+    error("Expression does not refer to an object in module: $ex")
 end
 
 """

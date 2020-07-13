@@ -5,9 +5,14 @@
 [![codecov.io](http://codecov.io/github/tk3369/Pretend.jl/coverage.svg?branch=master)](http://codecov.io/github/tk3369/Pretend.jl?branch=master)
 ![Project Status](https://img.shields.io/badge/status-experimental-red)
 
-Pretend is a mocking library.
+Pretend is a mocking library. The main idea is that you can annotate any functions
+as `@mockable`.  Then, you can easily stub out calls to the function with your
+own patch using `apply`.  You must activate the framework using `Pretend.activate`;
+otherwise, patches will not be applied (for performance reasons).
 
 ## Motivation
+
+The following examples demonstrate the basic usage of the Pretend framework.
 
 ```julia
 # Annotate any function with @mockable macro
@@ -30,6 +35,13 @@ end
 spy() do
     foo()
     @test called_exactly_once(bar, 1, 2)
+end
+
+# Mocking thirdparty methods!
+@mockable Base.sin(x::Real)
+fakesin(x::Real) = 10
+apply(sin => fakesin) do
+    @test sin(1.0) == 10
 end
 ```
 

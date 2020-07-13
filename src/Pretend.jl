@@ -2,6 +2,7 @@ module Pretend
 
 using Base: Callable
 using ExprTools: splitdef, combinedef
+using MacroTools: postwalk, rmlines
 
 export @mockable
 export apply, spy
