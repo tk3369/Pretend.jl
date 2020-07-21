@@ -10,7 +10,7 @@ as `@mockable`.  Then, you can easily stub out calls to the function with your
 own patch using `apply`.  You must activate the framework using `Pretend.activate`;
 otherwise, patches will not be applied (for performance reasons).
 
-## Motivation
+## How to use?
 
 The following examples demonstrate the basic usage of the Pretend framework.
 
@@ -45,8 +45,21 @@ apply(sin => fakesin) do
 end
 ```
 
+## Design Notes
+
+Because the `@mockable` macro needs to be used at the function definition, it's a little tricky 
+if you want to mock a third party function that you do not own.  To overcome this issue, you may 
+define a function in your own package and delegate the call to the third party function, and then 
+you can annotate this function as mockable.  For convenience, when you put `@mockable`
+just in front of a third-party method signature then it will expand into a delegate function
+with the same function name.
+
 ## Related projects
 
-* [Mocking.jl](https://github.com/invenia/Mocking.jl)
-* [SimpleMock.jl](https://github.com/JuliaTesting/SimpleMock.jl)
-* [ExpectationStubs.jl](https://github.com/oxinabox/ExpectationStubs.jl)
+[Mocking.jl](https://github.com/invenia/Mocking.jl) has a design in that the mocks annotated at 
+the call site rather than at the function definition. Pretend.jl turns around by putting the mock 
+at the function definition. Pretend.jl also borrows some of the ideas directly from 
+Mocking.jl e.g. using an `activate` function to enable the mocking framework.
+
+[SimpleMock.jl](https://github.com/JuliaTesting/SimpleMock.jl) is a very cool package that
+implements mocking using Cassette.jl's machinery.
