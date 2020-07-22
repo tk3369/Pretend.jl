@@ -1,14 +1,15 @@
 # Pretend.jl
 
-
 [![Travis Build Status](https://travis-ci.com/tk3369/Pretend.jl.svg?branch=master)](https://travis-ci.org/tk3369/Pretend.jl)
 [![codecov.io](http://codecov.io/github/tk3369/Pretend.jl/coverage.svg?branch=master)](http://codecov.io/github/tk3369/Pretend.jl?branch=master)
 ![Project Status](https://img.shields.io/badge/status-experimental-red)
 
-Pretend is a mocking library. The main idea is that you can annotate any functions
+Pretend.jl is a mocking library. The main idea is that you can annotate any functions
 as `@mockable`.  Then, you can easily stub out calls to the function with your
-own patch using `apply`.  You must activate the framework using `Pretend.activate`;
-otherwise, patches will not be applied (for performance reasons).
+own patch using `apply`.  You must activate the framework using `Pretend.activate()`; otherwise,
+patches will not be applied (for performance reasons).
+
+P.S. This package has been somewhat battle-tested for a production-quality enterprise application.
 
 ## Usage
 
@@ -75,9 +76,13 @@ it will be expanded to a delegate function having the same function name.
 
 ## Related projects
 
+There are several mocking libraries available. If Pretend.jl does not fit your needs, take a look
+at these alternatives:
+
 [Mocking.jl](https://github.com/invenia/Mocking.jl) has a different design such that the mocks are 
 annotated at the call site rather than at the function definition. Pretend.jl's design is heavily
 influenced by this.
 
 [SimpleMock.jl](https://github.com/JuliaTesting/SimpleMock.jl) is a very cool package that
 implements mocking using Cassette.jl's machinery.
+
