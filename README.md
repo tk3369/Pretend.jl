@@ -47,7 +47,7 @@ end
 
 ## Design Notes
 
-### How does @mockable work?
+### How does it work?
 
 The `@mockable` macro rewrites a method definition by wrapping around the logic that is 
 switched on when `Pretend.activated()` returns `true`.  The logic basically looks up
@@ -55,7 +55,16 @@ a patch in the "patch store" having the same method signature.  If a patch is fo
 then it will be called.  However, if a patch is not found or if the patch returns 
 the `Fallback()` singleton object, the existing method body will be executed.
 
+The `apply` function sets up the "patch store" with the user-supplied patch functions before
+running the body.  As it exits the current scope, the patch store is unwound to the previous
+state; hence, no more patch will be applied.  This ensures a clean slate whenever patches
+are applied.
+
+Both `apply` and `spy` functions keep track of executions of mockable functions. The
+difference is that `apply` expects a set of patches while `spy` does not take any patch.
+
 ### Dealing with third-party methods
+
 Because the `@mockable` macro needs to be used at the function definition, it's a little tricky 
 if you want to mock a third party function that you do not own.  To overcome this issue, you may 
 define a function in your own package and delegate the call to the third party function, and then 
