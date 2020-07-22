@@ -10,7 +10,7 @@ as `@mockable`.  Then, you can easily stub out calls to the function with your
 own patch using `apply`.  You must activate the framework using `Pretend.activate`;
 otherwise, patches will not be applied (for performance reasons).
 
-## How to use?
+## Usage
 
 The following examples demonstrate the basic usage of the Pretend framework.
 
