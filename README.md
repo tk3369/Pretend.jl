@@ -47,19 +47,28 @@ end
 
 ## Design Notes
 
+### How does @mockable work?
+
+The `@mockable` macro rewrites a method definition by wrapping around the logic that is 
+switched on when `Pretend.activated()` returns `true`.  The logic basically looks up
+a patch in the "patch store" having the same method signature.  If a patch is found
+then it will be called.  However, if a patch is not found or if the patch returns 
+the `Fallback()` singleton object, the existing method body will be executed.
+
+### Dealing with third-party methods
 Because the `@mockable` macro needs to be used at the function definition, it's a little tricky 
 if you want to mock a third party function that you do not own.  To overcome this issue, you may 
 define a function in your own package and delegate the call to the third party function, and then 
-you can annotate this function as mockable.  For convenience, when you put `@mockable`
-just in front of a third-party method signature then it will expand into a delegate function
-with the same function name.
+you can annotate this function as mockable.  
+
+For convenience, when you put `@mockable` just in front of a third-party method signature then 
+it will be expanded to a delegate function having the same function name.
 
 ## Related projects
 
-[Mocking.jl](https://github.com/invenia/Mocking.jl) has a design in that the mocks annotated at 
-the call site rather than at the function definition. Pretend.jl turns around by putting the mock 
-at the function definition. Pretend.jl also borrows some of the ideas directly from 
-Mocking.jl e.g. using an `activate` function to enable the mocking framework.
+[Mocking.jl](https://github.com/invenia/Mocking.jl) has a different design such that the mocks are 
+annotated at the call site rather than at the function definition. Pretend.jl's design is heavily
+influenced by this.
 
 [SimpleMock.jl](https://github.com/JuliaTesting/SimpleMock.jl) is a very cool package that
 implements mocking using Cassette.jl's machinery.
