@@ -25,6 +25,7 @@ macro mockable(ex)
     names = haskey(def, :args) ? arg_names(def[:args]) : ()
     kwnames = haskey(def, :kwargs) ? arg_names(def[:kwargs]) : ()
     kwexpr = [:($x = $x) for x in kwnames]
+    # @show func types names kwnames kwexpr
 
     def[:body] = quote
         if Pretend.activated()
@@ -81,6 +82,7 @@ function apply(f::Function, patches::Pair...)
             push!(ps, (sig = sig, patch = patch))
         end
     end
+    # @show ps
     patch_store = default_patch_store()
     preserve(patch_store)
     try
@@ -204,6 +206,13 @@ See also: [`arg_types`](@ref)
 """
 arg_names(args) = [arg_name(arg) for arg in args]
 
+arg_name(s::Symbol) = s
+arg_name(e::Expr) = arg_name(e, Val(e.head))
+
+arg_name(e::Expr, ::Val{:(::)}) = length(e.args) > 1 ? e.args[1] : gensym()
+arg_name(e::Expr, ::Val{:kw}) = arg_name(e.args[1])     # kwarg
+arg_name(e::Expr, ::Val{:(...)}) = arg_name(e.args[1])  # splat (handles both typed/untyped)
+
 """
     arg_types(args)
 
@@ -214,13 +223,32 @@ See also: [`arg_names`](@ref)
 """
 arg_types(args) = [arg_type(arg) for arg in args]
 
-arg_name(s::Symbol) = s
-arg_name(e::Expr) = arg_name(e, Val(e.head))
-arg_name(e::Expr, ::Val{:(::)}) = length(e.args) > 1 ? e.args[1] : gensym()
-arg_name(e::Expr, ::Val{:kw})   = arg_name(e.args[1])
-
 arg_type(s::Symbol) = :Any
 arg_type(e::Expr) = arg_type(e, Val(e.head))
+
 arg_type(e::Expr, ::Val{:(::)}) = length(e.args) > 1 ? e.args[2] : e.args[1]
-arg_type(e::Expr, ::Val{:kw})   = arg_type(e.args[1])
+arg_type(e::Expr, ::Val{:kw}) = arg_type(e.args[1])  # kwarg
+
+function arg_type(e::Expr, ::Val{:(...)})
+    # dump(e)
+    if e.args[1] isa Symbol
+        # Example: k...
+        # Expr
+        #     head: Symbol ...
+        #     args: Array{Any}((1,))
+        #     1: Symbol k
+        return :(Vararg{Any,N} where N)
+    elseif e.args[1] isa Expr
+        # Example: k::Int...
+        # Expr
+        #     head: Symbol ...
+        #     args: Array{Any}((1,))
+        #         1: Expr
+        #         head: Symbol ::
+        #         args: Array{Any}((2,))
+        #             1: Symbol k
+        #             2: Symbol Int
+        return :(Vararg{$(e.args[1].args[2]),N} where N)
+    end
+end
 

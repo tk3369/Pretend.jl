@@ -33,8 +33,35 @@
     @test div2(10) == 5                # without patch
     apply(div2 => (x; n = 3) -> n) do  # patched
         @test div2(10) == 3
+        # @test div2(10; n = 4) == 4     # TODO @mockable not passing kwargs yet
     end
     apply(div2 => (x) -> 0) do         # patched; kwarg not needed!
         @test div2(10) == 0
     end
+
+    # test splatting
+    @mockable splat1(k...) = 1
+    apply(splat1 => (k...) -> 2) do
+        @test splat1(1,2,3) == 2
+    end
+
+    # TODO This does not work because the patch store has Vararg but we have Int,Int,Int here
+    # @mockable splat2(k::Int...) = 1
+    # apply(splat2 => (k::Int...) -> 2) do
+    #     @test splat2(1,2,3) == 2
+    # end
+
+    @mockable splat3(; kwargs...) = -1
+    apply(splat3 => (; kwargs...) -> length(kwargs)) do
+        @test splat3()               == 0
+        # @test splat3(; x = 1)        == 1   # TODO @mockable not passing kwargs yet
+        # @test splat3(; x = 1, y = 2) == 2   # TODO @mockable not passing kwargs yet
+    end
+
+    # TODO This does not work because the @mockable code does not pass kwargs
+    # @mockable splat4(; kwargs::Int...) = 1
+    # apply(splat4 => (; kwargs::Int...) -> 2) do
+    #     @test splat4() == 2
+    # end
+
 end
