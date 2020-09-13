@@ -32,11 +32,24 @@
     @mockable div2(x; n = 2) = x / n
     @test div2(10) == 5                # without patch
     apply(div2 => (x; n = 3) -> n) do  # patched
-        @test div2(10) == 3
-        # @test div2(10; n = 4) == 4     # TODO @mockable not passing kwargs yet
+        # This case may be unintutive. Because `n` is not specified,
+        # the original value of `n` is passed (n = 2). Hence, the absense
+        # of `n` in the call isn't really absent and therefore overrides
+        # the different default value in the patch. Hence, it should be
+        # advised that
+        @test div2(10) == 2
+        @test div2(10; n = 4) == 4
     end
-    apply(div2 => (x) -> 0) do         # patched; kwarg not needed!
-        @test div2(10) == 0
+
+    # This is the correct way; patch should not have any default values for kwargs
+    apply(div2 => (x; n) -> n) do
+        @test div2(10) == 2
+        @test div2(10; n = 4) == 4
+    end
+
+    # Expect failure when patch does not take kwargs
+    apply(div2 => (x) -> 0) do
+        @test_throws MethodError div2(10) == 0
     end
 
     # test splatting
@@ -52,10 +65,10 @@
     # end
 
     @mockable splat3(; kwargs...) = -1
-    apply(splat3 => (; kwargs...) -> length(kwargs)) do
+    apply(splat3 => (; kwargs...) -> length(kwargs[:kwargs])) do
         @test splat3()               == 0
-        # @test splat3(; x = 1)        == 1   # TODO @mockable not passing kwargs yet
-        # @test splat3(; x = 1, y = 2) == 2   # TODO @mockable not passing kwargs yet
+        @test splat3(; x = 1)        == 1
+        @test splat3(; x = 1, y = 2) == 2
     end
 
     # TODO This does not work because the @mockable code does not pass kwargs

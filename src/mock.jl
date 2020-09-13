@@ -36,7 +36,8 @@ macro mockable(ex)
             patch_store = Pretend.default_patch_store()
             patch = Pretend.find(patch_store, $func, ($(types...),))
             if patch !== nothing
-                val = patch($(names...))
+                @debug "found patch" $func
+                val = patch($(names...); $(kwexpr...))
                 val isa Pretend.Fallback || return val
             end
         end
