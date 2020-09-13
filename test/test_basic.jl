@@ -64,12 +64,21 @@
     #     @test splat2(1,2,3) == 2
     # end
 
-    @mockable splat3(; kwargs...) = -1
-    apply(splat3 => (; kwargs...) -> length(kwargs[:kwargs])) do
-        @test splat3()               == 0
-        @test splat3(; x = 1)        == 1
-        @test splat3(; x = 1, y = 2) == 2
-    end
+    # TODO
+    # This does not work because `kwargs` comes back as the name of keywords args
+    # So, rather than passing via the syntax of x = x, y = y, etc., we need to pass
+    # to the patch function with `kwargs...` syntax
+    # Technically speaking, it does PASS the information but it's one more indirection.
+    # To get to the kwargs pairs, you have to get the first element of the kwargs.
+    # This causes unintutive behavior as shown in the erroneous code below where
+    # you see `length(kwargs[:kwargs]))`.
+    #
+    # @mockable splat3(; kwargs...) = -1
+    # apply(splat3 => (; kwargs...) -> length(kwargs[:kwargs])) do
+    #     @test splat3()               == 0
+    #     @test splat3(; x = 1)        == 1
+    #     @test splat3(; x = 1, y = 2) == 2
+    # end
 
     # TODO This does not work because the @mockable code does not pass kwargs
     # @mockable splat4(; kwargs::Int...) = 1

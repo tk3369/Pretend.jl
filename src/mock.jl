@@ -27,18 +27,23 @@ macro mockable(ex)
     kwexpr = [:($x = $x) for x in kwnames]
     # @show func types names kwnames kwexpr
 
+    # ensure macro hygiene
+    patch_store = gensym()
+    patch = gensym()
+    val = gensym()
+
     def[:body] = quote
         if Pretend.activated()
             # spy
             Pretend.record_call($func, ($(names...),), ($(kwexpr...),))
 
             # apply patch
-            patch_store = Pretend.default_patch_store()
-            patch = Pretend.find(patch_store, $func, ($(types...),))
-            if patch !== nothing
+            $patch_store = Pretend.default_patch_store()
+            $patch = Pretend.find($patch_store, $func, ($(types...),))
+            if $patch !== nothing
                 @debug "found patch" $func
-                val = patch($(names...); $(kwexpr...))
-                val isa Pretend.Fallback || return val
+                $val = $(patch)($(names...); $(kwexpr...))
+                $val isa Pretend.Fallback || return $val
             end
         end
         $(def[:body])
