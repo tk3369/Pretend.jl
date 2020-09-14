@@ -23,9 +23,13 @@ macro mockable(ex)
     func = def[:name]
     types = haskey(def, :args) ? arg_types(def[:args]) : ()
     names = haskey(def, :args) ? arg_names(def[:args]) : ()
-    kwnames = haskey(def, :kwargs) ? arg_names(def[:kwargs]) : ()
-    kwexpr = [:($x = $x) for x in kwnames]
-    # @show func types names kwnames kwexpr
+
+    # Keyword args
+    kwnames = haskey(def, :kwargs) ? arg_names(def[:kwargs]) : []
+    kwsplat = haskey(def, :kwargs) ? splat_arg_name(def[:kwargs]) : nothing
+    kwexpr = Expr[k == kwsplat ? :($k...) : :($k = $k) for k in kwnames]
+
+    #@show func types names kwnames kwexpr kwsplat
 
     # ensure macro hygiene
     patch_store = gensym()
@@ -35,7 +39,7 @@ macro mockable(ex)
     def[:body] = quote
         if Pretend.activated()
             # spy
-            Pretend.record_call($func, ($(names...),), ($(kwexpr...),))
+            Pretend.record_call($func, ($(names...),); $(kwexpr...))
 
             # apply patch
             $patch_store = Pretend.default_patch_store()
@@ -218,6 +222,17 @@ arg_name(e::Expr) = arg_name(e, Val(e.head))
 arg_name(e::Expr, ::Val{:(::)}) = length(e.args) > 1 ? e.args[1] : gensym()
 arg_name(e::Expr, ::Val{:kw}) = arg_name(e.args[1])     # kwarg
 arg_name(e::Expr, ::Val{:(...)}) = arg_name(e.args[1])  # splat (handles both typed/untyped)
+
+"""
+    splat_arg_name(args)
+
+Find the name of the function argument that uses the splatting syntax.
+This function should work for both regular arguments and keyword arguments.
+"""
+function splat_arg_name(args)
+    idx = findfirst(x -> x isa Expr && x.head === :(...), args)
+    return idx !== nothing ? arg_name(args[idx]) : nothing
+end
 
 """
     arg_types(args)
