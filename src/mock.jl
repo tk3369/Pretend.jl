@@ -23,6 +23,8 @@ macro mockable(ex)
     func = def[:name]
     types = haskey(def, :args) ? arg_types(def[:args]) : ()
 
+    # fill in unnamed args because they need to be passed to the patch
+    haskey(def, :args) && populate_unnamed_args!(def[:args])
     names = haskey(def, :args) ? arg_names(def[:args]) : ()
     splat_name = haskey(def, :args) ? splat_arg_name(def[:args]) : nothing
     names_expr = [k == splat_name ? :($k...) : :($k) for k in names]
@@ -31,7 +33,6 @@ macro mockable(ex)
     kwnames = haskey(def, :kwargs) ? arg_names(def[:kwargs]) : []
     kwsplat = haskey(def, :kwargs) ? splat_arg_name(def[:kwargs]) : nothing
     kwexpr = Expr[k == kwsplat ? :($k...) : :($k = $k) for k in kwnames]
-
     #@show func types names kwnames kwexpr kwsplat
 
     # ensure macro hygiene
@@ -57,6 +58,19 @@ macro mockable(ex)
     end
     expanded = esc(combinedef(def))
     return expanded
+end
+
+"""
+    populate_unnamed_args!(args)
+
+Populate unnamed arg expressions with random name.
+"""
+function populate_unnamed_args!(args::AbstractVector{T}) where {T}
+    for x in args
+        if x isa Expr && x.head == :(::) && length(x.args) == 1
+            pushfirst!(x.args, gensym())
+        end
+    end
 end
 
 """
