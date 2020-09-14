@@ -1,6 +1,6 @@
 @testset "Basic" begin
 
-# test mock that accepts no args
+    # test mock that accepts no args
     @mockable quack() = "quack"
     apply(quack => () -> "woof") do
         @test quack() == "woof"
@@ -80,6 +80,32 @@
         @test splat_kwarg()               == 0
         @test splat_kwarg(; x = 1)        == 1
         @test splat_kwarg(; x = 1, y = 2) == 2
+    end
+
+    # Test unnamed args
+
+    # simple
+    @mockable unnamed1(::Int) = 1
+    apply(unnamed1 => (::Int) -> 2) do
+        @test unnamed1(1) == 2
+    end
+
+    # any position
+    @mockable unnamed2(x, ::Int, y) = 1
+    apply(unnamed2 => (x, ::Int, y) -> 3) do
+        @test unnamed2(:a, 1, 2.0) == 3
+    end
+
+    # more than one unnamed arg
+    @mockable unnamed3(x, ::Int, ::Float64) = 1
+    apply(unnamed3 => (x, ::Int, ::Float64) -> 4) do
+        @test unnamed3(:a, 1, 2.0) == 4
+    end
+
+    # patch has name
+    @mockable unnamed4(::Int) = 1
+    apply(unnamed4 => (x::Int) -> 5) do
+        @test unnamed4(2) == 5
     end
 
 end
