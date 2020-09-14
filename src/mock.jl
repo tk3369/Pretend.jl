@@ -22,7 +22,10 @@ macro mockable(ex)
     def = splitdef(ex)
     func = def[:name]
     types = haskey(def, :args) ? arg_types(def[:args]) : ()
+
     names = haskey(def, :args) ? arg_names(def[:args]) : ()
+    splat_name = haskey(def, :args) ? splat_arg_name(def[:args]) : nothing
+    names_expr = [k == splat_name ? :($k...) : :($k) for k in names]
 
     # Keyword args
     kwnames = haskey(def, :kwargs) ? arg_names(def[:kwargs]) : []
@@ -39,14 +42,14 @@ macro mockable(ex)
     def[:body] = quote
         if Pretend.activated()
             # spy
-            Pretend.record_call($func, ($(names...),); $(kwexpr...))
+            Pretend.record_call($func, ($(names_expr...),); $(kwexpr...))
 
             # apply patch
             $patch_store = Pretend.default_patch_store()
             $patch = Pretend.find($patch_store, $func, ($(types...),))
             if $patch !== nothing
-                @debug "found patch" $func
-                $val = $(patch)($(names...); $(kwexpr...))
+                # @debug "found patch" $func $(names)
+                $val = $(patch)($(names_expr...); $(kwexpr...))
                 $val isa Pretend.Fallback || return $val
             end
         end

@@ -56,30 +56,30 @@
         end
     end
 
-    # test splatting
+    # test splatting with Any type
     @mockable splat1(k...) = 1
     apply(splat1 => (k...) -> 2) do
         @test splat1(1,2,3) == 2
     end
 
-    # TODO This does not work because the patch store has Vararg but we have Int,Int,Int here
-    # @mockable splat2(k::Int...) = 1
-    # apply(splat2 => (k::Int...) -> 2) do
-    #     @test splat2(1,2,3) == 2
-    # end
-
-    # Test keyword arg splatting
-    @mockable splat3(; kwargs...) = -1
-    apply(splat3 => (; kwargs...) -> length(kwargs)) do
-        @test splat3()               == 0
-        @test splat3(; x = 1)        == 1
-        @test splat3(; x = 1, y = 2) == 2
+    # test splatting with specific type
+    @mockable splat2(k::Int...) = 1
+    apply(splat2 => (k::Int...) -> 2) do
+        @test splat2(1,2,3) == 2
     end
 
-    # TODO This does not work because the @mockable code does not pass kwargs
-    # @mockable splat4(; kwargs::Int...) = 1
-    # apply(splat4 => (; kwargs::Int...) -> 2) do
-    #     @test splat4() == 2
-    # end
+    # Negative test: signature does not match so it cannot be applied
+    @mockable splat3(x, y) = x + y
+    apply(splat3 => (args...) -> 10) do
+        @test splat3(1, 2) == 3
+    end
+
+    # Test keyword arg splatting
+    @mockable splat_kwarg(; kwargs...) = -1
+    apply(splat_kwarg => (; kwargs...) -> length(kwargs)) do
+        @test splat_kwarg()               == 0
+        @test splat_kwarg(; x = 1)        == 1
+        @test splat_kwarg(; x = 1, y = 2) == 2
+    end
 
 end
