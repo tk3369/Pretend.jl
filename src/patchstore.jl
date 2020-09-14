@@ -3,8 +3,10 @@ const PATCHES = PatchStore(Dict(), Dict())
 default_patch_store() = PATCHES
 
 function find(store::PatchStore, args...)
-    # @show store.dct args
-    return get(store.dct, args, nothing)
+    @debug "finding patch" args
+    patch = get(store.dct, args, nothing)
+    patch !== nothing && @debug "found patch" store.dct patch
+    return patch
 end
 
 function register(store::PatchStore, f::Callable, args)
