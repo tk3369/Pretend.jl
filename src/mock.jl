@@ -4,16 +4,13 @@
 Annotate a function definition such that the function can be mocked later.
 """
 macro mockable(ex)
+
+    # If the expression contains a macro, then expand that first.
     ex = auto_expand_macro(ex, __module__)
 
     # If it looks like a call then it must be referring to a third party method.
     # e.g. @mockable Base.sin(x::Real)
-    if ex.head === :call
-        ret = delegate_method(ex, __module__)
-        ret === nothing && error("@mockable should be used at function definition")
-        expanded = postwalk(rmlines, macroexpand(__module__, ret))
-        return esc(expanded)
-    end
+    ex.head === :call && return mock_thirdparty_function(ex, __module__)
 
     # parse function definition
     def = splitdef(ex)
@@ -65,6 +62,13 @@ See https://github.com/invenia/ExprTools.jl/issues/10
 """
 function auto_expand_macro(ex::Expr, mod::Module)
     return ex.head === :macrocall ? macroexpand(mod, ex) : ex
+end
+
+function mock_thirdparty_function(ex::Expr, mod::Module)
+    ret = delegate_method(ex, mod)
+    ret === nothing && error("@mockable should be used at function definition")
+    expanded = postwalk(rmlines, macroexpand(mod, ret))
+    return esc(expanded)
 end
 
 """
