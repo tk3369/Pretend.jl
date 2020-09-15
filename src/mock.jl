@@ -14,37 +14,29 @@ macro mockable(ex)
 
     # parse function definition
     def = splitdef(ex)
-    func = def[:name]
-    types = haskey(def, :args) ? arg_types(def[:args]) : ()
+    populate_unnamed_args!(def)
+    func = parse_function_name(def)
+    types, names, slurp_name = parse_function_args(def)
+    kw_names, kw_slurp_name = parse_function_kwargs(def)
 
-    # fill in unnamed args because they need to be passed to the patch
-    haskey(def, :args) && populate_unnamed_args!(def[:args])
-    names = haskey(def, :args) ? arg_names(def[:args]) : ()
-    splat_name = haskey(def, :args) ? splat_arg_name(def[:args]) : nothing
-    names_expr = [k == splat_name ? :($k...) : :($k) for k in names]
-
-    # Keyword args
-    kwnames = haskey(def, :kwargs) ? arg_names(def[:kwargs]) : []
-    kwsplat = haskey(def, :kwargs) ? splat_arg_name(def[:kwargs]) : nothing
-    kwexpr = Expr[k == kwsplat ? :($k...) : :($k = $k) for k in kwnames]
-    #@show func types names kwnames kwexpr kwsplat
+    # Prepare expressions for interpolation into generated code
+    args_expr = [k == slurp_name ? :($k...) : :($k) for k in names]
+    kwargs_expr = [k == kw_slurp_name ? :($k...) : :($k = $k) for k in kw_names]
 
     # ensure macro hygiene
-    patch_store = gensym()
-    patch = gensym()
-    val = gensym()
+    patch_store, patch, val = [gensym() for _ in 1:3]
 
     def[:body] = quote
         if Pretend.activated()
             # spy
-            Pretend.record_call($func, ($(names_expr...),); $(kwexpr...))
+            Pretend.record_call($func, ($(args_expr...),); $(kwargs_expr...))
 
             # apply patch
             $patch_store = Pretend.default_patch_store()
             $patch = Pretend.find($patch_store, $func, ($(types...),))
             if $patch !== nothing
                 # @debug "found patch" $func $(names)
-                $val = $(patch)($(names_expr...); $(kwexpr...))
+                $val = $(patch)($(args_expr...); $(kwargs_expr...))
                 $val isa Pretend.Fallback || return $val
             end
         end
@@ -64,6 +56,12 @@ function auto_expand_macro(ex::Expr, mod::Module)
     return ex.head === :macrocall ? macroexpand(mod, ex) : ex
 end
 
+"""
+    mock_thirdparty_function(ex::Expr, mod::Module)
+
+Mock a thirdparty function by defining a local function that delegates
+to the thirdparty function.
+"""
 function mock_thirdparty_function(ex::Expr, mod::Module)
     ret = delegate_method(ex, mod)
     ret === nothing && error("@mockable should be used at function definition")
@@ -72,16 +70,34 @@ function mock_thirdparty_function(ex::Expr, mod::Module)
 end
 
 """
-    populate_unnamed_args!(args)
+    populate_unnamed_args!(def)
 
-Populate unnamed arg expressions with random name.
+Populate unnamed arg expressions in the function defintion `def` with random name.
 """
-function populate_unnamed_args!(args::AbstractVector{T}) where {T}
-    for x in args
+function populate_unnamed_args!(def::FunctionDef)
+    haskey(def, :args) || return
+    for x in def[:args]
         if x isa Expr && x.head == :(::) && length(x.args) == 1
             pushfirst!(x.args, gensym())
         end
     end
+end
+
+parse_function_name(def::FunctionDef) = def[:name]
+
+function parse_function_args(def::FunctionDef)
+    has_args = haskey(def, :args)
+    types = has_args ? arg_types(def[:args]) : ()
+    names = has_args ? arg_names(def[:args]) : ()
+    slurp_name = has_args ? slurp_arg_name(def[:args]) : nothing
+    return (types, names, slurp_name)
+end
+
+function parse_function_kwargs(def::FunctionDef)
+    has_kwargs = haskey(def, :kwargs)
+    kw_names = has_kwargs ? arg_names(def[:kwargs]) : []
+    kw_slurp_name = has_kwargs ? slurp_arg_name(def[:kwargs]) : nothing
+    return (kw_names, kw_slurp_name)
 end
 
 """
@@ -249,15 +265,15 @@ arg_name(e::Expr) = arg_name(e, Val(e.head))
 
 arg_name(e::Expr, ::Val{:(::)}) = length(e.args) > 1 ? e.args[1] : gensym()
 arg_name(e::Expr, ::Val{:kw}) = arg_name(e.args[1])     # kwarg
-arg_name(e::Expr, ::Val{:(...)}) = arg_name(e.args[1])  # splat (handles both typed/untyped)
+arg_name(e::Expr, ::Val{:(...)}) = arg_name(e.args[1])  # slurp (handles both typed/untyped)
 
 """
-    splat_arg_name(args)
+    slurp_arg_name(args)
 
-Find the name of the function argument that uses the splatting syntax.
+Find the name of the function argument that uses the slurping syntax.
 This function should work for both regular arguments and keyword arguments.
 """
-function splat_arg_name(args)
+function slurp_arg_name(args)
     idx = findfirst(x -> x isa Expr && x.head === :(...), args)
     return idx !== nothing ? arg_name(args[idx]) : nothing
 end
