@@ -15,12 +15,6 @@ function register(store::PatchStore, f::Callable, args)
     return nothing
 end
 
-function unregister(store::PatchStore, args)
-    # @info "Unregister" args
-    pop!(store.dct, args)
-    return nothing
-end
-
 function preserve(store::PatchStore)
     empty!(store.prev)
     copy!(store.prev, store.dct)
