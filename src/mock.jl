@@ -4,10 +4,7 @@
 Annotate a function definition such that the function can be mocked later.
 """
 macro mockable(ex)
-
-    # Auto-expand macro expression if necessary
-    # See https://github.com/invenia/ExprTools.jl/issues/10
-    ex = ex.head === :macrocall ? macroexpand(__module__, ex) : ex
+    ex = auto_expand_macro(ex, __module__)
 
     # If it looks like a call then it must be referring to a third party method.
     # e.g. @mockable Base.sin(x::Real)
@@ -58,6 +55,16 @@ macro mockable(ex)
     end
     expanded = esc(combinedef(def))
     return expanded
+end
+
+"""
+    auto_expand_macro(ex::Expr, mod::Module)
+
+Auto-expand macro expression if necessary.
+See https://github.com/invenia/ExprTools.jl/issues/10
+"""
+function auto_expand_macro(ex::Expr, mod::Module)
+    return ex.head === :macrocall ? macroexpand(mod, ex) : ex
 end
 
 """

@@ -8,4 +8,5 @@ Pretend.activate()
     include("test_spy.jl")
     include("test_misc.jl")
     include("test_3rdparty.jl")
+    include("test_inner_macro.jl")
 end
