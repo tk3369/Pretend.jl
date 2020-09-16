@@ -5,7 +5,7 @@ using ExprTools: splitdef, combinedef
 using MacroTools: postwalk, rmlines
 
 export @mockable
-export apply, spy
+export apply, mocked, spy
 export Fallback
 
 export
