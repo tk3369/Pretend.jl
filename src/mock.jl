@@ -3,7 +3,7 @@
 
 Annotate a function definition such that the function can be mocked later.
 """
-macro mockable(ex)
+macro mockable(ex::Expr)
 
     # If the expression contains a macro, then expand that first.
     ex = auto_expand_macro(ex, __module__)
