@@ -72,7 +72,7 @@ end
 """
     populate_unnamed_args!(def)
 
-Populate unnamed arg expressions in the function defintion `def` with random name.
+Populate unnamed args in the function defintion `def` with random names.
 """
 function populate_unnamed_args!(def::FunctionDef)
     haskey(def, :args) || return
@@ -115,17 +115,20 @@ conditional patches.
 
 # Example
 
-```
-@mockable add(x, y) = x + y
+```jldoctest
+julia> @mockable add(x, y) = x + y;
 
-apply(add => (x,y) -> x - y) do
-    @test add(1, 2) == -1
-end
+julia> apply(add => (x,y) -> x - y) do
+           @show add(1, 2)
+       end;
+add(1, 2) = -1
 
-apply(add => (x,y) -> x == y ? 0 : Fallback()) do
-    @test add(1, 2) == 3
-    @test add(5, 5) == 0
-end
+julia> apply(add => (x,y) -> x == y ? 0 : Fallback()) do
+           @show add(1, 2)
+           @show add(5, 5)
+       end;
+add(1, 2) = 3
+add(5, 5) = 0
 ```
 """
 function apply(f::Function, patches::Pair...)

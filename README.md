@@ -47,8 +47,7 @@ end
 
 # Mocking anonymous functions
 add_curry(n) = (x) -> x + n
-add1 = mocked(add_curry(1))
-
+add1 = mocked(add_curry(1))  # function, not macro
 apply(add1 => (x) -> x + 10) do
     @test add1(1) == 11
 end
@@ -72,7 +71,7 @@ are applied.
 Both `apply` and `spy` functions keep track of executions of mockable functions. The
 difference is that `apply` expects a set of patches while `spy` does not take any patch.
 
-### Dealing with third-party methods
+### Mocking third-party methods
 
 Because the `@mockable` macro needs to be used at the function definition, it's a little tricky
 if you want to mock a third party function that you do not own.  To overcome this issue, you may
@@ -81,6 +80,25 @@ you can annotate this function as mockable.
 
 For convenience, when you put `@mockable` just in front of a third-party method signature then
 it will be expanded to a delegate function having the same function name.
+
+### Mocking anonymous functions
+
+Functions are first-class in Julia, and a function can be created at any time on-the-fly.
+A common usage is high-order functions or closures. Consider the following function:
+```julia
+add_curry(n) = (x) -> x + n
+```
+
+It's easy to annotate `add_curry` with `@mockable` but perhaps I
+don't want to mock `add_curry` itself but the function that it returns:
+```julia
+add1 = add_curry(1)
+```
+
+In order to mock `add1`, I would use the `mocked` *function* as follows:
+```julia
+add1 = mocked(add_curry(1))
+```
 
 ## Related projects
 
