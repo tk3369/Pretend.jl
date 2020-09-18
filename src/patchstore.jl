@@ -8,7 +8,7 @@ default_patch_store() = PATCHES
 Find a patch from the `store` given the argument types.
 """
 function find(store::PatchStore, args...)
-    @debug "finding patch" args
+    @debug "finding patch" dctkeys=collect(keys(store.dct))[1] args
     patch = get(store.dct, args, nothing)
     patch !== nothing && @debug "found patch" store.dct patch
     return patch

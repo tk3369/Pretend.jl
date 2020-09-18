@@ -3,7 +3,7 @@
 
 Annotate a function definition such that the function can be mocked later.
 """
-macro mockable(ex)
+macro mockable(ex::Expr)
 
     # If the expression contains a macro, then expand that first.
     ex = auto_expand_macro(ex, __module__)
@@ -14,7 +14,7 @@ macro mockable(ex)
 
     # parse function definition
     def = splitdef(ex)
-    populate_unnamed_args!(def)
+    populate_unnamed_args!(def)  # needed to pass args from mock to underlying function
     func = parse_function_name(def)
     types, names, slurp_name = parse_function_args(def)
     kw_names, kw_slurp_name = parse_function_kwargs(def)
@@ -72,7 +72,7 @@ end
 """
     populate_unnamed_args!(def)
 
-Populate unnamed arg expressions in the function defintion `def` with random name.
+Populate unnamed args in the function defintion `def` with random names.
 """
 function populate_unnamed_args!(def::FunctionDef)
     haskey(def, :args) || return
@@ -115,17 +115,20 @@ conditional patches.
 
 # Example
 
-```
-@mockable add(x, y) = x + y
+```jldoctest
+julia> @mockable add(x, y) = x + y;
 
-apply(add => (x,y) -> x - y) do
-    @test add(1, 2) == -1
-end
+julia> apply(add => (x,y) -> x - y) do
+           @show add(1, 2)
+       end;
+add(1, 2) = -1
 
-apply(add => (x,y) -> x == y ? 0 : Fallback()) do
-    @test add(1, 2) == 3
-    @test add(5, 5) == 0
-end
+julia> apply(add => (x,y) -> x == y ? 0 : Fallback()) do
+           @show add(1, 2)
+           @show add(5, 5)
+       end;
+add(1, 2) = 3
+add(5, 5) = 0
 ```
 """
 function apply(f::Function, patches::Pair...)
@@ -133,7 +136,7 @@ function apply(f::Function, patches::Pair...)
     ps = []
     for (orig, patch) in patches
         for sig in signatures(orig, patch)
-            push!(ps, (sig = sig, patch = patch))
+            push!(ps, (orig = orig, sig = sig, patch = patch))
         end
     end
     # @show ps
@@ -141,7 +144,10 @@ function apply(f::Function, patches::Pair...)
     preserve(patch_store)
     try
         for p in ps
-            register(patch_store, p.patch, p.sig)
+            # To support anonymous functions (wrapped), we just strip away
+            # the arguments from the signature i.e. p.sig[1:1]
+            wrapped = is_wrapped_function(p.orig)
+            register(patch_store, p.patch, wrapped ? p.sig[1:1] : p.sig)
         end
         return f()
     finally
@@ -317,3 +323,31 @@ function arg_type(e::Expr, ::Val{:(...)})
     end
 end
 
+"""
+    mocked(f::Callable)
+
+Return a mock that delegates to function `f`.
+"""
+function mocked(f::Callable)
+    return function ___wrapped(args...; kwargs...)
+        if Pretend.activated()
+            Pretend.record_call(f, args; kwargs...)
+            patch_store = Pretend.default_patch_store()
+            patch = Pretend.find(patch_store, ___wrapped)
+            if patch !== nothing
+                ret = patch(args...; kwargs...)
+                return ret isa Fallback ? f(args...; kwargs...) : ret
+            end
+        end
+        return f(args...; kwargs...)
+    end
+end
+
+"""
+    is_wrapped_function(f::Callable)
+
+Returns true if the function `f` is wrapped by [`mock`](@ref).
+"""
+function is_wrapped_function(f::Callable)
+    return first(methods(f)).name == :___wrapped
+end
