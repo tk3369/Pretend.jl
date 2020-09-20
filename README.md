@@ -106,8 +106,7 @@ There are several mocking libraries available. If Pretend.jl does not fit your n
 at these alternatives:
 
 [Mocking.jl](https://github.com/invenia/Mocking.jl) has a different design such that the mocks are
-annotated at the call site rather than at the function definition. Pretend.jl's design is heavily
-influenced by this.
+annotated at the call site rather than at the function definition.
 
 [SimpleMock.jl](https://github.com/JuliaTesting/SimpleMock.jl) is a very cool package that
 implements mocking using Cassette.jl's machinery.
