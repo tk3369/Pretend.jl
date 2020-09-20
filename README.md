@@ -7,7 +7,7 @@
 Pretend.jl is a [test doubles](https://en.wikipedia.org/wiki/Test_double) library.
 The main idea is that you can annotate any functions
 as `@mockable`.  Then, you can easily stub out calls to the function with your
-own patch using `apply`.
+own patch.
 
 ## Usage
 
