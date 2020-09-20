@@ -38,11 +38,18 @@ spy() do
     @test called_exactly_once(bar, 1, 2)
 end
 
-# Mocking thirdparty methods!
+# Mocking thirdparty methods
 @mockable Base.sin(x::Real)
 fakesin(x::Real) = 10
 apply(sin => fakesin) do
     @test sin(1.0) == 10
+end
+
+# Mocking anonymous functions
+add_curry(n) = (x) -> x + n
+add1 = mocked(add_curry(1))  # function, not macro
+apply(add1 => (x) -> x + 10) do
+    @test add1(1) == 11
 end
 ```
 
@@ -50,10 +57,10 @@ end
 
 ### How does it work?
 
-The `@mockable` macro rewrites a method definition by wrapping around the logic that is 
+The `@mockable` macro rewrites a method definition by wrapping around the logic that is
 switched on when `Pretend.activated()` returns `true`.  The logic basically looks up
 a patch in the "patch store" having the same method signature.  If a patch is found
-then it will be called.  However, if a patch is not found or if the patch returns 
+then it will be called.  However, if a patch is not found or if the patch returns
 the `Fallback()` singleton object, the existing method body will be executed.
 
 The `apply` function sets up the "patch store" with the user-supplied patch functions before
@@ -64,22 +71,41 @@ are applied.
 Both `apply` and `spy` functions keep track of executions of mockable functions. The
 difference is that `apply` expects a set of patches while `spy` does not take any patch.
 
-### Dealing with third-party methods
+### Mocking third-party methods
 
-Because the `@mockable` macro needs to be used at the function definition, it's a little tricky 
-if you want to mock a third party function that you do not own.  To overcome this issue, you may 
-define a function in your own package and delegate the call to the third party function, and then 
-you can annotate this function as mockable.  
+Because the `@mockable` macro needs to be used at the function definition, it's a little tricky
+if you want to mock a third party function that you do not own.  To overcome this issue, you may
+define a function in your own package and delegate the call to the third party function, and then
+you can annotate this function as mockable.
 
-For convenience, when you put `@mockable` just in front of a third-party method signature then 
+For convenience, when you put `@mockable` just in front of a third-party method signature then
 it will be expanded to a delegate function having the same function name.
+
+### Mocking anonymous functions
+
+Functions are first-class in Julia, and a function can be created at any time on-the-fly.
+A common usage is high-order functions or closures. Consider the following function:
+```julia
+add_curry(n) = (x) -> x + n
+```
+
+It's easy to annotate `add_curry` with `@mockable` but perhaps I
+don't want to mock `add_curry` itself but the function that it returns:
+```julia
+add1 = add_curry(1)
+```
+
+In order to mock `add1`, I would use the `mocked` *function* as follows:
+```julia
+add1 = mocked(add_curry(1))
+```
 
 ## Related projects
 
 There are several mocking libraries available. If Pretend.jl does not fit your needs, take a look
 at these alternatives:
 
-[Mocking.jl](https://github.com/invenia/Mocking.jl) has a different design such that the mocks are 
+[Mocking.jl](https://github.com/invenia/Mocking.jl) has a different design such that the mocks are
 annotated at the call site rather than at the function definition. Pretend.jl's design is heavily
 influenced by this.
 
