@@ -1,6 +1,6 @@
 # Pretend.jl
 
-[![Travis Build Status](https://travis-ci.com/tk3369/Pretend.jl.svg?branch=master)](https://travis-ci.org/tk3369/Pretend.jl)
+[![Build Status](https://github.com/tk3369/Pretend.jl/workflows/CI/badge.svg)](https://github.com/tk3369/Pretend.jl/actions?query=workflow%3ACI)
 [![codecov.io](http://codecov.io/github/tk3369/Pretend.jl/coverage.svg?branch=master)](http://codecov.io/github/tk3369/Pretend.jl?branch=master)
 ![Project Status](https://img.shields.io/badge/status-new-orange)
 
